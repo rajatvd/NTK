@@ -1,0 +1,17 @@
+act: relu
+alpha: 1
+bias: true
+hidden_layers: 1
+iters: 10000
+linearize: false
+lr: 0.001
+save_every: 100
+seed: 975998810
+width: 100
+xdata:
+- - -0.1
+  - 0.5
+ydata:
+- - 0.4
+  - 0.1
+zero_output: true
