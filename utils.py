@@ -70,13 +70,20 @@ def simple_net(width,
 
 
 def ntk(model, inp):
+    """Calculate the neural tangent kernel of the model on the inputs.
+
+    Returns the gradient feature map along with the tangent kernel.
+    """
     out = model(inp)
     p_vec = nn.utils.parameters_to_vector(model.parameters())
     p, = p_vec.shape
-    batch, outdim = out.shape
+    n, outdim = out.shape
     assert outdim == 1, "cant handle output dim higher than 1 for now"
-    features = torch.zeros(batch, p, requires_grad=False)
-    for i in range(batch):
+
+    # this is the transpose jacobian (grad y(w))^T)
+    features = torch.zeros(n, p, requires_grad=False)
+
+    for i in range(n):  # for loop over data points
         model.zero_grad()
         out[i].backward(retain_graph=True)
         p_grad = torch.tensor([], requires_grad=False)
@@ -84,11 +91,12 @@ def ntk(model, inp):
             p_grad = torch.cat((p_grad, p.grad.reshape(-1)))
         features[i, :] = p_grad
 
-    tk = features @ features.t()
+    tk = features @ features.t()  # compute the tangent kernel
     return features, tk
 
 
 def get_run_dir(ex):
+    """Helper for sacred experiment logging."""
     for obs in ex.observers:
         if type(obs) == FileStorageObserver:
             return obs.dir
@@ -105,6 +113,28 @@ def gd(model, xdata, ydata,
        run_dir='.',
        progress_bar=True,
        eps=1e-10):
+    """Run gradient descent using square loss on the model with the given data.
+
+    Updates the given model instance.
+
+    Parameters
+    ----------
+    alpha : float
+        Scaling factor to normalize by. The loss is divided by alpha^2.
+    save_every : int
+        Interval with which to save model instances.
+    ex : Sacred experiment
+        Experiment to use for logging and saving.
+    run_dir : str
+        Path of directory to save models.
+    eps : float
+        Stop if the loss reduces below this value.
+
+    Returns
+    -------
+    list of loss values
+
+    """
 
     opt = optim.SGD(model.parameters(), lr=lr)
     losses = []
@@ -125,7 +155,11 @@ def gd(model, xdata, ydata,
             # ex.add_artifact(fname, f"{i:06d}_model.model")
 
         out = model(xdata)
+
+        # normalizing the loss:
         loss = 1/(alpha**2) * nn.MSELoss()(out, ydata)
+
+        # we store the unnormalized losses
         litem = loss.item()*(alpha**2)
         losses.append(litem)
         if progress_bar:
