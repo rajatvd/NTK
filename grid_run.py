@@ -1,3 +1,4 @@
+"""Run a grid of sacred experiments"""
 from sacred import Experiment
 import yaml
 from pprint import pprint
@@ -8,6 +9,35 @@ ex = Experiment('grid_run')
 
 
 def squish_dict(d):
+    """Flatten a nested dictionary into a single dictionary.
+
+    Nested keys are indexed with a dot. For example,
+
+    d = {
+        'a': 1,
+        'b': {
+            'c': 2,
+            'd': 3,
+            'blah': {
+                'foo': 67,
+                'bar': 'no'
+            }
+        },
+        'e': 'lol'
+    }
+
+    becomes
+
+    {
+        'a': 1,
+        'b.c': 2,
+        'b.d': 3,
+        'b.blah.foo': 67,
+        'b.blah.bar': 'no',
+        'e': 'lol'
+    }
+
+    """
     ks = list(d.keys())
     for k in ks:
         v = d[k]
@@ -22,26 +52,27 @@ def squish_dict(d):
         del d[k]
     return d
 
+
 # # %%
 # d = {
 #     'a': 1,
 #     'b': {
 #         'c': 2,
 #         'd': 3,
-#         'flab': {
+#         'blah': {
 #             'foo': 67,
 #             'bar': 'no'
 #         }
 #     },
 #     'e': 'lol'
 # }
-# squish_dict(d)
+# pprint(squish_dict(d))
 # # %%
 
 
 @ex.config
 def config():
-    cmd = 'echo'
+    cmd = 'echo'  # command to run with config
     config_file = 'grid_config.yaml'
     same_seed = False
 
